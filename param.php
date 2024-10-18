@@ -1,7 +1,7 @@
 <?php
-	$base = 'site';
-	$pass = 'mnVkrECAWnj96Yk4';
-	$user = 'root';
+	$base = 'user_database';
+	$pass = 'toto';
+	$user = 'toto';
 	$host = 'localhost';
 
 	//$base = 'qdeclercq';
