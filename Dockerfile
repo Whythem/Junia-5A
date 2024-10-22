@@ -2,7 +2,7 @@
 FROM nginx:latest
 
 # Copy your web files to the Nginx document root
-COPY var/www/html/ /usr/share/nginx/html/
+COPY /home/whythem/devops/Junia-5A /usr/share/nginx/html/
 
 # Expose port 80
 EXPOSE 80
