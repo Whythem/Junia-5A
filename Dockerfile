@@ -1,9 +1,9 @@
-# Use the official Nginx image
-FROM nginx:latest
+FROM nginx:stable-perl
 
-# Copy your web files to the Nginx document root
-COPY /home/whythem/devops/Junia-5A /usr/share/nginx/html/
+# Copier les fichiers HTML vers le répertoire par défaut de Nginx
+COPY ./ /usr/share/nginx/html
 
-# Expose port 80
+# Exposer le port 80 pour Nginx
 EXPOSE 80
 
+CMD ["nginx", "-g", "daemon off;"]
