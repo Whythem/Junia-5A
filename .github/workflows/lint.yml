@@ -1,0 +1,24 @@
+name: Lint PHP Files
+
+# Le workflow s'exécute lors d'un push sur la branche develop
+on:
+  push:
+    branches:
+      - develop
+
+# Les jobs à exécuter
+jobs:
+  lint:
+    name: PHP Lint Check
+    runs-on: self-hosted  # Utiliser le runner self-hosté
+
+    steps:
+      # 1. Checkout le code du dépôt
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # 2. Lint tous les fichiers PHP
+      - name: Lint PHP Files
+        run: |
+          find . -name "*.php" -exec php -l {} \;
+
