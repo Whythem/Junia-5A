@@ -31,7 +31,7 @@ jobs:
         run: |
           docker build -t whythem/nginx:latest .
 
-  push-dockerhub:
+  push:
     runs-on: self-hosted
     name: Push to DockerHub
     needs: build  # Ce job ne s'exécute qu'après le build
@@ -48,25 +48,24 @@ jobs:
           docker push whythem/nginx:latest
 
   deploy:
-    runs-on: self-hosted
-    name: Deploy Application
-    needs: push-dockerhub  # Ce job ne s'exécute qu'après le push sur DockerHub
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: SSH to Server and Deploy
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p 22 $SSH_HOST >> ~/.ssh/known_hosts
-          ssh $SSH_USER@$SSH_HOST "
-            docker pull whythem/nginx:latest &&
-            docker-compose down &&
-            docker-compose up -d
-          "
+      name: Deploy to Remote Server
+      runs-on: [self-hosted]
+      needs: push
+  
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+  
+        - name: Pull Docker images and start containers
+          run: |
+            if [ "$(docker ps -q -f name=nginx-SSH)" ]; then
+                echo "Container 'nginx' is running. Stopping and removing it."
+                docker stop nginx-SSH
+                docker rm nginx-SSH
+            else
+                echo "Container 'nginx' is not running."
+            fi
+            ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+              docker pull whythem/nginx:latest
+              docker run -d --name nginx-SSH -p 80:80 whythem/nginx:latest
+            EOF
