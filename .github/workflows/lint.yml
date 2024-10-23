@@ -1,51 +1,72 @@
-name: PHP Lint, Build and Push
+name: CI/CD Pipeline
+
 on:
   push:
     branches:
       - develop
 
 jobs:
-  lint: name: Run PHP Lint
-    runs-on: [self-hosted]
-
+  lint:
+    runs-on: self-hosted
+    name: Lint PHP Files
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Install PHP
-        run: sudo apt-get install php-cli
-
-      - name: Run PHP lint on all PHP files
+      
+      - name: Lint PHP files
         run: |
-          for file in $(git ls-files "*.php"); do
+          for file in $(find . -name '*.php'); do
             php -l $file;
           done
 
   build:
+    runs-on: self-hosted
     name: Build Docker Image
-    runs-on: [self-hosted]
-    needs: lint  # Ce job ne s'exécute qu'après le job 'lint'
-
+    needs: lint  # Ajout de la dépendance au job lint
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build Docker image
+      - name: Build Docker Image
         run: |
-          docker build -t jeremiewarconsin/nginx:latest .
+          docker build -t whythem/nginx:latest .
 
-  push:
-    name: Push Docker Image to Docker Hub
-    runs-on: [self-hosted]
-    needs: build  # Ce job ne s'exécute qu'après le job 'build'
-
+  push-dockerhub:
+    runs-on: self-hosted
+    name: Push to DockerHub
+    needs: build  # Ce job ne s'exécute qu'après le build
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Log in to Docker Hub
-        run: docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password "${{ secrets.DOCKER_HUB_PASSWORD }}"
-
-      - name: Push Docker image to Docker Hub
+      - name: Login to DockerHub
         run: |
-          docker push jeremiewarconsin/nginx:latest
+          docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password "${{ secrets.DOCKER_HUB_PASSWORD }}"
+      
+      - name: Push Docker Image
+        run: |
+          docker push whythem/nginx:latest
+
+  deploy:
+    runs-on: self-hosted
+    name: Deploy Application
+    needs: push-dockerhub  # Ce job ne s'exécute qu'après le push sur DockerHub
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: SSH to Server and Deploy
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p 22 $SSH_HOST >> ~/.ssh/known_hosts
+          ssh $SSH_USER@$SSH_HOST "
+            docker pull whythem/nginx:latest &&
+            docker-compose down &&
+            docker-compose up -d
+          "
