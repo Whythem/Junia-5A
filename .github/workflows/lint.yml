@@ -48,4 +48,4 @@ jobs:
 
       - name: Push Docker image to Docker Hub
         run: |
-          docker push whythem/nginx:latest
+          docker push jeremiewarconsin/nginx:latest
